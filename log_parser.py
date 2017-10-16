@@ -30,10 +30,18 @@ if __name__ == '__main__':
     cursor.execute('''
         select name, sum(count_views) as author_views from article_views
         group by name
-        order by author_views desc
-        limit 5;
+        order by author_views desc;
     ''')
     popular_authors = cursor.fetchall()
     for author in popular_authors:
         print('%s — %s views' % (author[0], author[1]))
     print('3. On which days did more than 1% of requests lead to errors?')
+    cursor.execute('''
+        select 
+            to_char(time::date, 'Month DD, YYYY') as crush_date,
+            count(path)
+        from log
+        group by crush_date
+        
+    ''')
+    print(cursor.fetchall())
