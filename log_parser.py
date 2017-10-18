@@ -37,11 +37,33 @@ if __name__ == '__main__':
         print('%s — %s views' % (author[0], author[1]))
     print('3. On which days did more than 1% of requests lead to errors?')
     cursor.execute('''
+        create or replace view requests as
         select 
-            to_char(time::date, 'Month DD, YYYY') as crush_date,
-            count(path)
+        time::date as day
+        ,count(status) as views
         from log
-        group by crush_date
-        
+        group by day
     ''')
-    print(cursor.fetchall())
+    connection.commit()
+    cursor.execute('''
+        create or replace view fails as
+        select 
+        time::date as day
+        ,count(status) as views
+        from log
+        where status != '200 OK'
+        group by day
+    ''')
+    connection.commit()
+    cursor.execute('''
+        select to_char(r.day, 'Month DD, YYYY')
+        ,round((f.views * 100)::numeric/r.views, 2) as percentage from requests r
+        inner join fails f on f.day = r.day
+        where (f.views * 100)::numeric/r.views > 1
+        limit 10;
+    ''')
+    fail_days = cursor.fetchall()
+    for day in fail_days:
+        print('%s — %s%% errors' % (day[0], day[1]))
+    cursor.close()
+    connection.close()
